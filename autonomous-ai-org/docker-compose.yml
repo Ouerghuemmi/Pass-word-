@@ -1,7 +1,6 @@
 version: '3.9'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: aio-postgres
@@ -13,7 +12,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./database/migrations:/migrations
     ports:
       - "5432:5432"
     networks:
@@ -25,7 +23,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Redis Cache & Event Bus
   redis:
     image: redis:7-alpine
     container_name: aio-redis
@@ -43,7 +40,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Qdrant Vector Database
   qdrant:
     image: qdrant/qdrant:v1.7.0
     container_name: aio-qdrant
@@ -51,7 +47,6 @@ services:
       QDRANT_API_KEY: ${QDRANT_API_KEY:-qdrant_api_key_secure}
     volumes:
       - qdrant_data:/qdrant/storage
-      - ./config/qdrant_config.yaml:/qdrant/config/production.yaml
     ports:
       - "6333:6333"
       - "6334:6334"
@@ -64,7 +59,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Orchestrator Service
   orchestrator:
     build:
       context: ./orchestration
@@ -79,8 +73,6 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY:-qdrant_api_key_secure}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - TEMPORAL_HOST=temporal
-      - TEMPORAL_PORT=7233
     volumes:
       - ./orchestration:/app
       - ./logs:/app/logs
@@ -102,7 +94,6 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # API Gateway Service
   api:
     build:
       context: ./api
@@ -139,7 +130,6 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Next.js Web UI
   web:
     build:
       context: ./web
@@ -166,7 +156,6 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Prometheus Metrics
   prometheus:
     image: prom/prometheus:latest
     container_name: aio-prometheus
@@ -189,7 +178,6 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Grafana Dashboards
   grafana:
     image: grafana/grafana:latest
     container_name: aio-grafana
@@ -197,11 +185,8 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin_password}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./config/grafana/provisioning:/etc/grafana/provisioning
-      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
     ports:
       - "3001:3000"
     depends_on:
@@ -216,7 +201,6 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Temporal Workflow Engine
   temporal:
     image: temporalio/auto-setup:latest
     container_name: aio-temporal
@@ -227,10 +211,8 @@ services:
       - POSTGRES_PWD=${DB_PASSWORD:-aio_password_secure}
       - POSTGRES_SEEDS=postgres
       - DB_SCHEMA=temporal
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/docker.yaml
     volumes:
       - temporal_data:/var/lib/temporal
-      - ./config/temporal/dynamicconfig.yaml:/etc/temporal/config/dynamicconfig/docker.yaml
     ports:
       - "7233:7233"
       - "6233:6233"
@@ -241,7 +223,6 @@ services:
       - backend
     restart: unless-stopped
 
-  # Temporal Web UI
   temporal-ui:
     image: temporalio/ui:latest
     container_name: aio-temporal-ui
